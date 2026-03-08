@@ -48,10 +48,12 @@ export default function Header() {
               Chat
             </Button>
           </Link>
-          <Button size="sm" className="gap-2">
-            <User className="h-4 w-4" />
-            Sign In
-          </Button>
+          <Link to="/auth">
+            <Button size="sm" className="gap-2">
+              <User className="h-4 w-4" />
+              Sign In
+            </Button>
+          </Link>
         </div>
 
         <button
