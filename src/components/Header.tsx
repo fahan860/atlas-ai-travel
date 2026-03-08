@@ -48,10 +48,12 @@ export default function Header() {
               Chat
             </Button>
           </Link>
-          <Button size="sm" className="gap-2">
-            <User className="h-4 w-4" />
-            Sign In
-          </Button>
+          <Link to="/auth">
+            <Button size="sm" className="gap-2">
+              <User className="h-4 w-4" />
+              Sign In
+            </Button>
+          </Link>
         </div>
 
         <button
@@ -86,7 +88,9 @@ export default function Header() {
                 </Link>
               ))}
               <div className="mt-2 flex gap-2">
-                <Button size="sm" className="flex-1">Sign In</Button>
+                <Link to="/auth" onClick={() => setMobileOpen(false)} className="flex-1">
+                  <Button size="sm" className="w-full">Sign In</Button>
+                </Link>
               </div>
             </nav>
           </motion.div>
