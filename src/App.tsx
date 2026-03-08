@@ -13,6 +13,7 @@ import PackagesPage from "@/pages/PackagesPage";
 import ChatPage from "@/pages/ChatPage";
 import PlannerPage from "@/pages/PlannerPage";
 import AuthPage from "@/pages/AuthPage";
+import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
