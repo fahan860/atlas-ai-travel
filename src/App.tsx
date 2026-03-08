@@ -13,6 +13,7 @@ import PackagesPage from "@/pages/PackagesPage";
 import ChatPage from "@/pages/ChatPage";
 import PlannerPage from "@/pages/PlannerPage";
 import AuthPage from "@/pages/AuthPage";
+import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +36,7 @@ const App = () => (
                 <Route path="/chat" element={<ChatPage />} />
                 <Route path="/planner" element={<PlannerPage />} />
                 <Route path="/auth" element={<AuthPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </main>

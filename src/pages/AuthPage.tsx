@@ -100,6 +100,31 @@ export default function AuthPage() {
             {loading ? "Please wait..." : isLogin ? "Sign in" : "Create account"}
             <ArrowRight className="h-4 w-4" />
           </Button>
+
+          {isLogin && (
+            <button
+              type="button"
+              onClick={async () => {
+                if (!email) {
+                  toast({ title: "Enter your email first", variant: "destructive" });
+                  return;
+                }
+                setLoading(true);
+                const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                  redirectTo: `${window.location.origin}/reset-password`,
+                });
+                setLoading(false);
+                if (error) {
+                  toast({ title: "Error", description: error.message, variant: "destructive" });
+                } else {
+                  toast({ title: "Check your email", description: "We sent you a password reset link." });
+                }
+              }}
+              className="w-full text-center text-sm text-muted-foreground hover:text-primary underline-offset-4 hover:underline"
+            >
+              Forgot your password?
+            </button>
+          )}
         </form>
 
         <p className="mt-4 text-center text-sm text-muted-foreground">
