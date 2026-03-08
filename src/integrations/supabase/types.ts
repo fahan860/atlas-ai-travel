@@ -70,6 +70,45 @@ export type Database = {
           },
         ]
       }
+      trips: {
+        Row: {
+          activities: Json
+          budget: number
+          created_at: string
+          destination: string
+          end_date: string
+          id: string
+          itinerary: Json | null
+          start_date: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activities?: Json
+          budget?: number
+          created_at?: string
+          destination: string
+          end_date: string
+          id?: string
+          itinerary?: Json | null
+          start_date: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activities?: Json
+          budget?: number
+          created_at?: string
+          destination?: string
+          end_date?: string
+          id?: string
+          itinerary?: Json | null
+          start_date?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
