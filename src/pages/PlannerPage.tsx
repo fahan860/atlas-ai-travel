@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, MapPin, Calendar, DollarSign, Trash2, Edit2 } from "lucide-react";
+import { Plus, MapPin, Calendar, DollarSign, Trash2, Clock, Sparkles, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { generateItinerary, type ItineraryResponse } from "@/lib/agentClient";
 
 interface Trip {
   id: string;
@@ -12,6 +14,7 @@ interface Trip {
   endDate: string;
   budget: number;
   activities: string[];
+  itinerary?: ItineraryResponse;
 }
 
 export default function PlannerPage() {
@@ -27,6 +30,9 @@ export default function PlannerPage() {
   ]);
   const [newTrip, setNewTrip] = useState({ destination: "", startDate: "", endDate: "", budget: "" });
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [generatingId, setGeneratingId] = useState<string | null>(null);
+  const [expandedDay, setExpandedDay] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const addTrip = () => {
     if (!newTrip.destination || !newTrip.startDate || !newTrip.endDate) return;
@@ -49,12 +55,38 @@ export default function PlannerPage() {
     setTrips((prev) => prev.filter((t) => t.id !== id));
   };
 
+  const generateForTrip = async (trip: Trip) => {
+    setGeneratingId(trip.id);
+    try {
+      const start = new Date(trip.startDate);
+      const end = new Date(trip.endDate);
+      const days = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+      const result = await generateItinerary({
+        destination: trip.destination,
+        days,
+        budget: trip.budget || undefined,
+        startDate: trip.startDate,
+      });
+      setTrips((prev) =>
+        prev.map((t) =>
+          t.id === trip.id
+            ? { ...t, itinerary: result, activities: result.days.flatMap((d) => d.activities.map((a) => a.activity)).slice(0, 6) }
+            : t
+        )
+      );
+    } catch (e) {
+      toast({ title: "Generation failed", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
+    } finally {
+      setGeneratingId(null);
+    }
+  };
+
   return (
     <div className="container py-10">
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-3xl md:text-4xl text-foreground mb-2">Trip Planner</h1>
-          <p className="text-muted-foreground">Create and manage your Morocco travel plans.</p>
+          <p className="text-muted-foreground">Create and manage your Morocco travel plans with AI-powered itineraries.</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
@@ -101,7 +133,7 @@ export default function PlannerPage() {
           </Button>
         </div>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="space-y-6">
           {trips.map((trip, i) => (
             <motion.div
               key={trip.id}
@@ -119,21 +151,33 @@ export default function PlannerPage() {
                       {new Date(trip.startDate).toLocaleDateString()} - {new Date(trip.endDate).toLocaleDateString()}
                     </span>
                     <span className="flex items-center gap-1">
-                      <DollarSign className="h-3.5 w-3.5" />
-                      ${trip.budget}
+                      <DollarSign className="h-3.5 w-3.5" />${trip.budget}
                     </span>
                   </div>
                 </div>
-                <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <Edit2 className="h-4 w-4" />
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1"
+                    disabled={generatingId === trip.id}
+                    onClick={() => generateForTrip(trip)}
+                  >
+                    {generatingId === trip.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4" />
+                    )}
+                    {trip.itinerary ? "Regenerate" : "Generate"} Itinerary
                   </Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteTrip(trip.id)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
-              {trip.activities.length > 0 && (
+
+              {/* Activities chips */}
+              {trip.activities.length > 0 && !trip.itinerary && (
                 <div>
                   <p className="text-xs font-medium text-muted-foreground mb-2">Activities</p>
                   <div className="flex flex-wrap gap-2">
@@ -141,6 +185,73 @@ export default function PlannerPage() {
                       <span key={a} className="rounded-full bg-secondary px-3 py-1 text-xs text-secondary-foreground">{a}</span>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* AI Itinerary */}
+              {trip.itinerary && (
+                <div className="mt-4 border-t border-border pt-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium text-primary">{trip.itinerary.title}</span>
+                    <span className="ml-auto text-xs text-muted-foreground">Est. ${trip.itinerary.estimatedBudget}</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-4">{trip.itinerary.summary}</p>
+
+                  <div className="space-y-2">
+                    {trip.itinerary.days.map((day) => {
+                      const dayKey = `${trip.id}-${day.day}`;
+                      const isExpanded = expandedDay === dayKey;
+                      return (
+                        <div key={day.day} className="rounded-lg border border-border">
+                          <button
+                            onClick={() => setExpandedDay(isExpanded ? null : dayKey)}
+                            className="flex w-full items-center justify-between px-4 py-3 text-left"
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+                                {day.day}
+                              </span>
+                              <div>
+                                <p className="text-sm font-medium text-card-foreground">{day.title}</p>
+                                <p className="text-xs text-muted-foreground">{day.location}</p>
+                              </div>
+                            </div>
+                            {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                          </button>
+                          {isExpanded && (
+                            <div className="border-t border-border px-4 py-3 space-y-3">
+                              {day.activities.map((act, ai) => (
+                                <div key={ai} className="flex gap-3">
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground min-w-[60px]">
+                                    <Clock className="h-3 w-3" />
+                                    {act.time}
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium text-card-foreground">{act.activity}</p>
+                                    <p className="text-xs text-muted-foreground">{act.description}</p>
+                                    {act.tip && <p className="text-xs text-primary mt-1">💡 {act.tip}</p>}
+                                  </div>
+                                  <span className="text-xs text-muted-foreground">${act.estimatedCost}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {trip.itinerary.packingList && trip.itinerary.packingList.length > 0 && (
+                    <div className="mt-4">
+                      <p className="text-xs font-medium text-muted-foreground mb-2">Packing List</p>
+                      <div className="flex flex-wrap gap-2">
+                        {trip.itinerary.packingList.map((item) => (
+                          <span key={item} className="rounded-full bg-secondary px-3 py-1 text-xs text-secondary-foreground">{item}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </motion.div>

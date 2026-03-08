@@ -1,24 +1,60 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Plane, ArrowRight, Clock, Search } from "lucide-react";
+import { Plane, ArrowRight, Clock, Search, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { flights } from "@/data/mockData";
+import { useToast } from "@/hooks/use-toast";
+import { flights as mockFlights } from "@/data/mockData";
+import { searchFlights, type FlightResult } from "@/lib/agentClient";
 
 export default function FlightsPage() {
   const [searchFrom, setSearchFrom] = useState("");
   const [searchTo, setSearchTo] = useState("");
   const [maxPrice, setMaxPrice] = useState("all");
+  const [date, setDate] = useState("");
+  const [aiFlights, setAiFlights] = useState<FlightResult[] | null>(null);
+  const [aiSummary, setAiSummary] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
 
-  const filtered = useMemo(() => {
-    return flights.filter((f) => {
+  // Use AI results if available, otherwise filter mock data
+  const displayFlights = useMemo(() => {
+    if (aiFlights) {
+      return aiFlights.filter((f) => {
+        const matchPrice = maxPrice === "all" || f.price <= parseInt(maxPrice);
+        return matchPrice;
+      });
+    }
+    return mockFlights.filter((f) => {
       const matchFrom = !searchFrom || f.departureCity.toLowerCase().includes(searchFrom.toLowerCase());
       const matchTo = !searchTo || f.arrivalCity.toLowerCase().includes(searchTo.toLowerCase());
       const matchPrice = maxPrice === "all" || f.price <= parseInt(maxPrice);
       return matchFrom && matchTo && matchPrice;
     });
-  }, [searchFrom, searchTo, maxPrice]);
+  }, [searchFrom, searchTo, maxPrice, aiFlights]);
+
+  const handleAiSearch = async () => {
+    if (!searchTo.trim()) {
+      toast({ title: "Enter a destination", description: "Please enter a destination city.", variant: "destructive" });
+      return;
+    }
+    setLoading(true);
+    try {
+      const result = await searchFlights({
+        from: searchFrom || undefined,
+        to: searchTo,
+        date: date || undefined,
+        budget: maxPrice !== "all" ? `under $${maxPrice}` : undefined,
+      });
+      setAiFlights(result.flights);
+      setAiSummary(result.summary);
+    } catch (e) {
+      toast({ title: "Search failed", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="container py-10">
@@ -44,6 +80,10 @@ export default function FlightsPage() {
           </div>
         </div>
         <div className="min-w-[150px]">
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Date</label>
+          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        </div>
+        <div className="min-w-[150px]">
           <label className="mb-1 block text-xs font-medium text-muted-foreground">Max Price</label>
           <Select value={maxPrice} onValueChange={setMaxPrice}>
             <SelectTrigger><SelectValue placeholder="Any price" /></SelectTrigger>
@@ -55,16 +95,39 @@ export default function FlightsPage() {
             </SelectContent>
           </Select>
         </div>
+        <div className="flex items-end">
+          <Button onClick={handleAiSearch} disabled={loading} className="gap-2">
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            AI Search
+          </Button>
+        </div>
       </div>
+
+      {/* AI Summary */}
+      {aiSummary && (
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6 rounded-xl border border-primary/20 bg-primary/5 p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium text-primary">AI Recommendation</span>
+          </div>
+          <p className="text-sm text-muted-foreground">{aiSummary}</p>
+        </motion.div>
+      )}
 
       {/* Results */}
       <div className="space-y-4">
-        {filtered.length === 0 && (
-          <div className="rounded-xl border border-border bg-card p-10 text-center text-muted-foreground">
-            No flights found. Try adjusting your filters.
+        {loading && (
+          <div className="rounded-xl border border-border bg-card p-10 text-center">
+            <Loader2 className="mx-auto mb-3 h-8 w-8 animate-spin text-primary" />
+            <p className="text-muted-foreground">AI is searching for the best flights…</p>
           </div>
         )}
-        {filtered.map((flight, i) => (
+        {!loading && displayFlights.length === 0 && (
+          <div className="rounded-xl border border-border bg-card p-10 text-center text-muted-foreground">
+            No flights found. Try adjusting your filters or use AI Search.
+          </div>
+        )}
+        {!loading && displayFlights.map((flight, i) => (
           <motion.div
             key={flight.id}
             initial={{ opacity: 0, y: 20 }}
