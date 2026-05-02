@@ -1,73 +1,234 @@
-# Welcome to your Lovable project
+# AtlasTrip AI — Morocco-Focused AI Travel Planner
 
-## Project info
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react) ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript) ![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite) ![Supabase](https://img.shields.io/badge/Supabase-Backend-3ECF8E?logo=supabase) ![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-38B2AC?logo=tailwindcss)
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+AtlasTrip AI is a Morocco-focused AI travel planning web app. Users can chat with an AI assistant (with streaming responses), plan and save trips, generate itineraries, and explore flights, hotels, and packages — powered by a Supabase backend (Auth, Postgres with RLS, and Edge Functions).
 
-## How can I edit this code?
+---
 
-There are several ways of editing your application.
+## Table of Contents
 
-**Use Lovable**
+- [Key Features](#key-features)
+- [Pages](#pages)
+- [Tech Stack](#tech-stack)
+- [Architecture](#architecture)
+- [Data Model](#data-model)
+- [Edge Functions / API](#edge-functions--api)
+- [Getting Started](#getting-started)
+- [Security Notes](#security-notes)
+- [Known Limitations](#known-limitations)
+- [Project Structure](#project-structure)
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+---
 
-Changes made via Lovable will be committed automatically to this repo.
+## Key Features
 
-**Use your preferred IDE**
+- **AI travel assistant chat** with streaming responses
+- **Trip planner** with full CRUD — create, save, update, delete trips
+- **AI itinerary generation** saved back to the trip
+- **AI-assisted travel tools** via Supabase Edge Functions:
+  - Flight search
+  - Hotel / riad recommendations
+  - Weather guidance
+- **User authentication** — email/password sign up & sign in, password reset flow
+- **Saved data per user** protected with Row Level Security (RLS):
+  - Conversations + messages
+  - Trips + generated itineraries
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+---
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## Pages
 
-Follow these steps:
+| Route | Description |
+|---|---|
+| `/` | Landing page — Discover Morocco |
+| `/chat` | AI travel assistant (streaming chat) |
+| `/planner` | Trip planner — save and generate itineraries |
+| `/flights` | AI-assisted flight search |
+| `/hotels` | AI-assisted hotel / riad search |
+| `/packages` | Curated travel packages |
+| `/auth` | Login / Signup |
+| `/reset-password` | Password reset flow |
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+---
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+## Tech Stack
 
-# Step 3: Install the necessary dependencies.
-npm i
+| Layer | Technology |
+|---|---|
+| Frontend | React 18, TypeScript, Vite |
+| UI | Tailwind CSS, shadcn/ui (Radix UI), Framer Motion |
+| Routing | React Router v6 |
+| Data fetching | TanStack React Query |
+| Backend | Supabase (Auth + Postgres + Edge Functions) |
+| Database | Postgres with Row Level Security |
+| AI Layer | Supabase Edge Functions (provider abstracted server-side) |
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+---
+
+## Architecture
+
+```
+┌─────────────────────────────┐
+│        React SPA            │
+│  React Router + React Query │
+│  shadcn/ui + Tailwind CSS   │
+└──────────────┬──────────────┘
+               │ HTTPS
+┌──────────────▼──────────────┐
+│         Supabase            │
+│  ┌────────────────────────┐ │
+│  │  Auth (email/password) │ │
+│  ├────────────────────────┤ │
+│  │  Postgres + RLS        │ │
+│  │  conversations         │ │
+│  │  messages              │ │
+│  │  trips                 │ │
+│  ├────────────────────────┤ │
+│  │  Edge Functions        │ │
+│  │  chat                  │ │
+│  │  flights-agent         │ │
+│  │  hotels-agent          │ │
+│  │  weather-agent         │ │
+│  │  itinerary-agent       │ │
+│  └────────────────────────┘ │
+└─────────────────────────────┘
+```
+
+**Key flows:**
+
+- **Auth** — `AuthContext` wraps the app, manages user/session, exposes `signOut`
+- **Chat** — frontend streams responses from `/functions/v1/chat`
+- **Planner** — trips saved to Postgres via React Query hooks; itinerary generated via `/functions/v1/itinerary-agent`
+- **RLS** — all Postgres queries are scoped to `auth.uid() = user_id`
+
+---
+
+## Data Model
+
+| Table | Description |
+|---|---|
+| `conversations` | Chat sessions per user |
+| `messages` | Messages linked to a conversation |
+| `trips` | Saved trips with dates, budget, and optional itinerary payload |
+
+All tables have RLS policies — users can only read and write their own rows.
+
+---
+
+## Edge Functions / API
+
+The frontend calls Supabase Edge Functions at:
+
+```
+{VITE_SUPABASE_URL}/functions/v1/<function-name>
+```
+
+| Function | Description |
+|---|---|
+| `chat` | Streaming AI chat endpoint |
+| `flights-agent` | AI-assisted flight search |
+| `hotels-agent` | AI-assisted hotel / riad search |
+| `weather-agent` | Weather guidance for Morocco destinations |
+| `itinerary-agent` | AI itinerary generation for saved trips |
+
+> The AI provider (OpenAI / Gemini / etc.) is handled **server-side** inside Edge Functions. No LLM keys are exposed to the client.
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+ and npm
+- A Supabase project with migrations applied and Edge Functions deployed
+
+### Environment Variables
+
+Create a `.env.local` file in the project root:
+
+```env
+VITE_SUPABASE_URL=https://<your-project-ref>.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=<your-supabase-anon-key>
+VITE_SUPABASE_PROJECT_ID=<your-project-ref>
+```
+
+### Install & Run
+
+```bash
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Dev server runs on **http://localhost:8080**
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Supabase Setup
 
-**Use GitHub Codespaces**
+**Apply database migrations:**
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```bash
+supabase login
+supabase link --project-ref <your-project-ref>
+supabase db push
+```
 
-## What technologies are used for this project?
+**Deploy Edge Functions:**
 
-This project is built with:
+```bash
+supabase functions deploy chat
+supabase functions deploy flights-agent
+supabase functions deploy hotels-agent
+supabase functions deploy weather-agent
+supabase functions deploy itinerary-agent
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+**Set AI provider secrets (inside Edge Functions):**
 
-## How can I deploy this project?
+```bash
+supabase secrets set YOUR_AI_API_KEY="..."
+```
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+---
 
-## Can I connect a custom domain to my Lovable project?
+## Security Notes
 
-Yes, you can!
+- `.env` is **not committed** — use `.env.local` for local development
+- AI provider API keys live **only** in Supabase Edge Function secrets (never client-side)
+- All database access is protected by **Row Level Security** policies
+- See `.env.example` for required variable names
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+---
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## Known Limitations
+
+- The **Packages page** currently uses mock/static data (not backed by a live inventory)
+- The AI provider is abstracted behind Edge Functions and is not documented in this repo
+- No map integration yet (route visualization, points of interest)
+
+---
+
+## Project Structure
+
+```
+atlas-ai-travel/
+├── index.html
+├── vite.config.ts
+├── package.json
+├── .env.example               # Variable names only — copy to .env.local
+├── src/
+│   ├── App.tsx                # Routes + providers
+│   ├── main.tsx               # App bootstrap
+│   ├── pages/                 # Home, Chat, Planner, Flights, Hotels, Packages, Auth
+│   ├── components/            # Header, Footer + shadcn/ui components
+│   ├── contexts/              # AuthContext (Supabase session)
+│   ├── hooks/                 # React Query hooks — trips, conversations
+│   ├── integrations/supabase/ # Supabase client + generated DB types
+│   └── lib/                   # Edge Function clients (agentClient, streamChat)
+└── supabase/
+    ├── migrations/            # Postgres schema + RLS policies
+    └── functions/             # AI agent Edge Functions (chat, *-agent)
+```
+
+---
+
+> **Portfolio note (PFA / internship):** AtlasTrip AI demonstrates a complete full-stack workflow — modern React architecture (TypeScript + Router + React Query), production-grade Supabase usage (Auth + Postgres + RLS), and a secure AI integration pattern through Edge Functions with no client-side LLM secrets.
