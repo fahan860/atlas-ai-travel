@@ -1,5 +1,9 @@
 # AtlasTrip AI — Morocco-Focused AI Travel Planner
 
+[![Portfolio](https://img.shields.io/badge/Portfolio-case%20study-0ea5e9)](https://fatima-zahrae-ahannuk.vercel.app/projects/atlastrip)
+
+> Part of the portfolio of **Fatima Zahrae Ahannuk** — case study: https://fatima-zahrae-ahannuk.vercel.app/projects/atlastrip
+
 ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react) ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript) ![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite) ![Supabase](https://img.shields.io/badge/Supabase-Backend-3ECF8E?logo=supabase) ![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-38B2AC?logo=tailwindcss)
 
 AtlasTrip AI is a Morocco-focused AI travel planning web app. Users can chat with an AI assistant (with streaming responses), plan and save trips, generate itineraries, and explore flights, hotels, and packages — powered by a Supabase backend (Auth, Postgres with RLS, and Edge Functions).
